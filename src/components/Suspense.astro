@@ -15,7 +15,6 @@ function wrapPromise(promise: Promise<string>) {
   return {
     read() {
       if (status === "pending") {
-        console.log("throwing");
         throw suspender;
       } else if (status === "error") {
         throw result;
@@ -27,7 +26,6 @@ function wrapPromise(promise: Promise<string>) {
 }
 
 const idx = Astro.locals.suspended.length;
-console.log(idx);
 Astro.locals.suspended.push(wrapPromise(Astro.slots.render("default")));
 ---
 
