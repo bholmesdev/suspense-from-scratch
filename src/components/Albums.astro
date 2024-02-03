@@ -1,0 +1,13 @@
+---
+type Props = {
+  ms: number;
+};
+
+const { ms } = Astro.props;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+await sleep(ms);
+---
+
+<p>Albums!</p>
