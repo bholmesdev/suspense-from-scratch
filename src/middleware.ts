@@ -23,6 +23,10 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
     const stream = new ReadableStream<{ chunk: string; idx: number }>({
       start(controller) {
         let remaining = ctx.locals.suspended.length;
+        if (remaining === 0) {
+          controller.close();
+          return;
+        }
         ctx.locals.suspended.forEach(async (readable, idx) => {
           try {
             const chunk = await readable;
