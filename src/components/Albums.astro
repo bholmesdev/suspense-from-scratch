@@ -1,4 +1,7 @@
 ---
+import Nested from "./Nested.astro";
+import Suspense from "./Suspense.astro";
+
 type Props = {
   ms: number;
 };
@@ -11,3 +14,7 @@ await sleep(ms);
 ---
 
 <p>Albums!</p>
+<Suspense>
+  <p slot="fallback">Waiting on secret message...</p>
+  <Nested />
+</Suspense>
