@@ -1,6 +1,5 @@
 ---
-const idx = Astro.locals.suspended.length;
-Astro.locals.suspended.push(Astro.slots.render("default"));
+const idx = Astro.locals.suspend(Astro.slots.render("default"));
 ---
 
 <div style="display: contents" data-suspense-fallback={idx}>

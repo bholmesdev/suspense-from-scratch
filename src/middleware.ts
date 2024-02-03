@@ -1,7 +1,9 @@
 import { defineMiddleware } from "astro:middleware";
 
-export type Suspended = { read: () => string };
-type SuspendedChunk = Suspended & { promise: Promise<void> };
+type SuspendedChunk = {
+  chunk: string;
+  idx: number;
+};
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const response = await next();
@@ -10,38 +12,43 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
     return response;
   }
 
-  ctx.locals.suspended = [];
+  let streamController: ReadableStreamDefaultController<SuspendedChunk>;
 
   async function* render() {
+    // Thank you owoce!
+    // https://gist.github.com/lubieowoce/05a4cb2e8cd252787b54b7c8a41f09fc
+    const stream = new ReadableStream<SuspendedChunk>({
+      start(controller) {
+        streamController = controller;
+      },
+    });
+
+    let curId = 0;
+    const pending = new Set<Promise<string>>();
+
+    ctx.locals.suspend = (promise) => {
+      const idx = curId++;
+      pending.add(promise);
+      promise
+        .then((chunk) => {
+          streamController.enqueue({ chunk, idx });
+          pending.delete(promise);
+          if (pending.size === 0) {
+            streamController.close();
+          }
+        })
+        .catch((e) => {
+          streamController.error(e);
+        });
+      return idx;
+    };
+
     // @ts-expect-error ReadableStream does not have asyncIterator
     for await (const chunk of response.body) {
       yield chunk;
     }
 
-    // Thank you owoce!
-    // https://gist.github.com/lubieowoce/05a4cb2e8cd252787b54b7c8a41f09fc
-    const stream = new ReadableStream<{ chunk: string; idx: number }>({
-      start(controller) {
-        let remaining = ctx.locals.suspended.length;
-        if (remaining === 0) {
-          controller.close();
-          return;
-        }
-        ctx.locals.suspended.forEach(async (readable, idx) => {
-          try {
-            const chunk = await readable;
-            controller.enqueue({ chunk, idx });
-          } catch (e) {
-            controller.error(e);
-            return;
-          }
-          remaining--;
-          if (remaining === 0) {
-            controller.close();
-          }
-        });
-      },
-    });
+    if (!pending.size) return streamController.close();
 
     // @ts-expect-error ReadableStream does not have asyncIterator
     for await (const { chunk, idx } of stream) {

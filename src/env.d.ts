@@ -2,6 +2,6 @@
 
 declare namespace App {
   interface Locals {
-    suspended: Promise[];
+    suspend(promise: Promise<string>): number;
   }
 }
