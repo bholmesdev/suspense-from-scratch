@@ -18,6 +18,8 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
       yield chunk;
     }
 
+    // Thank you owoce!
+    // https://gist.github.com/lubieowoce/05a4cb2e8cd252787b54b7c8a41f09fc
     const stream = new ReadableStream<{ chunk: string; idx: number }>({
       start(controller) {
         let remaining = ctx.locals.suspended.length;
