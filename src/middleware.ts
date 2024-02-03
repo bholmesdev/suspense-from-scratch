@@ -18,29 +18,26 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
       yield chunk;
     }
 
-    const suspendedChunks: SuspendedChunk[] = [];
-    for (const [idx, suspended] of ctx.locals.suspended.entries()) {
-      try {
-        const chunk = suspended.read();
-        yield withSuspendedTemplate({ chunk, idx });
-      } catch (e) {
-        if (e instanceof Promise) {
-          const { read } = suspended;
-          suspendedChunks.push({ read, promise: e });
-        } else {
-          throw e;
-        }
-      }
-    }
-
     const stream = new ReadableStream<{ chunk: string; idx: number }>({
       start(controller) {
-        let remaining = suspendedChunks.length;
-        suspendedChunks.forEach(async (readable, idx) => {
-          await readable.promise;
-          const chunk = readable.read();
-
-          controller.enqueue({ chunk, idx });
+        let remaining = ctx.locals.suspended.length;
+        ctx.locals.suspended.forEach(async (readable, idx) => {
+          try {
+            try {
+              const chunk = readable.read();
+              controller.enqueue({ chunk, idx });
+            } catch (e) {
+              if (!(e instanceof Promise)) {
+                throw e;
+              }
+              await e;
+              const chunk = readable.read();
+              controller.enqueue({ chunk, idx });
+            }
+          } catch (e) {
+            controller.error(e);
+            return;
+          }
           remaining--;
           if (remaining === 0) {
             controller.close();
@@ -51,16 +48,9 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 
     // @ts-expect-error ReadableStream does not have asyncIterator
     for await (const { chunk, idx } of stream) {
-      yield withSuspendedTemplate({ chunk, idx });
-    }
-  }
-
-  // @ts-expect-error generator not assignable to ReadableStream
-  return new Response(render(), response.headers);
-});
-
-function withSuspendedTemplate({ chunk, idx }: { chunk: string; idx: number }) {
-  return `<template data-suspense-id=${JSON.stringify(idx)}>${chunk}</template>
+      yield `<template data-suspense-id=${JSON.stringify(
+        idx
+      )}>${chunk}</template>
 <script>
 (() => {
 	const template = document.querySelector(\`template[data-suspense-id="${idx}"]\`).content;
@@ -68,4 +58,9 @@ function withSuspendedTemplate({ chunk, idx }: { chunk: string; idx: number }) {
 	dest.replaceWith(template);
 })();
 </script>`;
-}
+    }
+  }
+
+  // @ts-expect-error generator not assignable to ReadableStream
+  return new Response(render(), response.headers);
+});
