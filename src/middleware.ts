@@ -25,17 +25,8 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
         let remaining = ctx.locals.suspended.length;
         ctx.locals.suspended.forEach(async (readable, idx) => {
           try {
-            try {
-              const chunk = readable.read();
-              controller.enqueue({ chunk, idx });
-            } catch (e) {
-              if (!(e instanceof Promise)) {
-                throw e;
-              }
-              await e;
-              const chunk = readable.read();
-              controller.enqueue({ chunk, idx });
-            }
+            const chunk = await readable;
+            controller.enqueue({ chunk, idx });
           } catch (e) {
             controller.error(e);
             return;

@@ -2,6 +2,6 @@
 
 declare namespace App {
   interface Locals {
-    suspended: import("./middleware").Suspended[];
+    suspended: Promise[];
   }
 }

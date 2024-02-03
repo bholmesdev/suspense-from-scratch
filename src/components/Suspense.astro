@@ -1,32 +1,6 @@
 ---
-function wrapPromise(promise: Promise<string>) {
-  let status = "pending";
-  let result: string;
-  let suspender = promise.then(
-    (r) => {
-      status = "success";
-      result = r;
-    },
-    (e) => {
-      status = "error";
-      result = e;
-    }
-  );
-  return {
-    read() {
-      if (status === "pending") {
-        throw suspender;
-      } else if (status === "error") {
-        throw result;
-      } else {
-        return result;
-      }
-    },
-  };
-}
-
 const idx = Astro.locals.suspended.length;
-Astro.locals.suspended.push(wrapPromise(Astro.slots.render("default")));
+Astro.locals.suspended.push(Astro.slots.render("default"));
 ---
 
 <div style="display: contents" data-suspense-fallback={idx}>
