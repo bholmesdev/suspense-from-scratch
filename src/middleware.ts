@@ -33,9 +33,6 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
         .then((chunk) => {
           streamController.enqueue({ chunk, idx });
           pending.delete(promise);
-          if (pending.size === 0) {
-            streamController.close();
-          }
         })
         .catch((e) => {
           streamController.error(e);
@@ -62,6 +59,7 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 	dest.replaceWith(template);
 })();
 </script>`;
+      if (!pending.size) return streamController.close();
     }
   }
 
