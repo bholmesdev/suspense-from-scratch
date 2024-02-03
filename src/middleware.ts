@@ -49,13 +49,11 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 
     // @ts-expect-error ReadableStream does not have asyncIterator
     for await (const { chunk, idx } of stream) {
-      yield `<template data-suspense-id=${JSON.stringify(
-        idx
-      )}>${chunk}</template>
+      yield `<template data-suspense=${JSON.stringify(idx)}>${chunk}</template>
 <script>
 (() => {
-	const template = document.querySelector(\`template[data-suspense-id="${idx}"]\`).content;
-	const dest = document.querySelector(\`div[data-suspense-fallback="${idx}"]\`);
+	const template = document.querySelector(\`[data-suspense="${idx}"]\`).content;
+	const dest = document.querySelector(\`[data-suspense-fallback="${idx}"]\`);
 	dest.replaceWith(template);
 })();
 </script>`;
