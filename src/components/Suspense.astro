@@ -1,7 +1,72 @@
 ---
-const idx = Astro.locals.suspend(Astro.slots.render("default"));
+type PendingThenable<T> = { status: "pending" };
+type FulfilledThenable<T> = { status: "fulfilled"; value: T };
+type RejectedThenable<T> = { status: "rejected"; reason: unknown };
+
+type Thenable<T> = Promise<T> &
+  (PendingThenable<T> | FulfilledThenable<T> | RejectedThenable<T>);
+
+function instrument<T>(promise: Promise<T>): Thenable<T> {
+  const thenable = promise as Promise<T> & PendingThenable<T>;
+  thenable.status = "pending";
+  thenable.then(
+    (value) => {
+      const fulfilled = promise as Promise<T> & FulfilledThenable<T>;
+      fulfilled.status = "fulfilled";
+      fulfilled.value = value;
+    },
+    (error) => {
+      const rejected = promise as Promise<T> & RejectedThenable<T>;
+      rejected.status = "rejected";
+      rejected.reason = error;
+    }
+  );
+  return thenable;
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+const promise = Astro.slots.render("default");
+const thenable = instrument(promise); // add `.status` and `.value` / `.reason`
+
+const DEADLINE_MS = 5; // arbitrary, might be too high
+await sleep(DEADLINE_MS);
+
+let idx = -1;
+let content = "";
+
+switch (thenable.status) {
+  case "pending": {
+    idx = Astro.locals.suspend(promise);
+    break;
+  }
+  case "rejected": {
+    throw thenable.reason;
+  }
+  case "fulfilled": {
+    if (import.meta.env.DEV) {
+      console.log(
+        `Suspense :: slot resolved within deadline (${DEADLINE_MS}ms), no need to show fallback`
+      );
+    }
+    content = thenable.value;
+    break;
+  }
+}
 ---
 
-<div style="display: contents" data-suspense-fallback={idx}>
-  <slot name="fallback" />
-</div>
+{
+  // rely on `idx/content` instead of `thenable.status` -- that may have changed by the time we get here.
+  // (at least i think it might?)
+  // this way, at least this will be consistent with what we passed to middleware
+  // i.e. if we called suspend(), we'll create a matching fallback here
+  idx !== -1 ? (
+    <div style="display: contents" data-suspense-fallback={idx}>
+      <slot name="fallback" />
+    </div>
+  ) : (
+    <Fragment set:html={content} />
+  )
+}

@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Suspense from "../components/Suspense.astro";
 import Albums from "../components/Albums.astro";
+import AlbumsSync from "../components/AlbumsSync.astro";
 ---
 
 <Layout title="Twitter">
@@ -25,6 +26,10 @@ import Albums from "../components/Albums.astro";
       </a>
     </nav>
     <main>
+      <Suspense>
+        <p slot="fallback">Loading... (shouldn't appear)</p>
+        <AlbumsSync />
+      </Suspense>
       <Suspense>
         <p slot="fallback">Loading...</p>
         <Albums ms={3000} />
