@@ -6,40 +6,40 @@ type SuspendedChunk = {
 };
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
+  let streamController: ReadableStreamDefaultController<SuspendedChunk>;
+
+  // Thank you owoce!
+  // https://gist.github.com/lubieowoce/05a4cb2e8cd252787b54b7c8a41f09fc
+  const stream = new ReadableStream<SuspendedChunk>({
+    start(controller) {
+      streamController = controller;
+    },
+  });
+
+  let curId = 0;
+  const pending = new Set<Promise<string>>();
+
+  ctx.locals.suspend = (promise) => {
+    const idx = curId++;
+    pending.add(promise);
+    promise
+      .then((chunk) => {
+        streamController.enqueue({ chunk, idx });
+        pending.delete(promise);
+      })
+      .catch((e) => {
+        streamController.error(e);
+      });
+    return idx;
+  };
+
   const response = await next();
   // ignore non-HTML responses
   if (!response.headers.get("content-type")?.startsWith("text/html")) {
     return response;
   }
 
-  let streamController: ReadableStreamDefaultController<SuspendedChunk>;
-
   async function* render() {
-    // Thank you owoce!
-    // https://gist.github.com/lubieowoce/05a4cb2e8cd252787b54b7c8a41f09fc
-    const stream = new ReadableStream<SuspendedChunk>({
-      start(controller) {
-        streamController = controller;
-      },
-    });
-
-    let curId = 0;
-    const pending = new Set<Promise<string>>();
-
-    ctx.locals.suspend = (promise) => {
-      const idx = curId++;
-      pending.add(promise);
-      promise
-        .then((chunk) => {
-          streamController.enqueue({ chunk, idx });
-          pending.delete(promise);
-        })
-        .catch((e) => {
-          streamController.error(e);
-        });
-      return idx;
-    };
-
     // @ts-expect-error ReadableStream does not have asyncIterator
     for await (const chunk of response.body) {
       yield chunk;
