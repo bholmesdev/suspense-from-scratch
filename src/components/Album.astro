@@ -1,0 +1,21 @@
+---
+import { getById, type AlbumId } from "../data/db";
+import Like from "./Like";
+
+type Props = {
+  id: AlbumId;
+};
+
+const { id } = Astro.props;
+
+const a = await getById(id);
+---
+
+<li class="flex gap-2 items-center mb-2">
+  <img class="w-20 aspect-square" src={a.cover} alt={a.title} />
+  <div>
+    <h3 class="text-xl">{a.title}</h3>
+    <p>{a.songs.length} songs</p>
+    <Like client:load />
+  </div>
+</li>
