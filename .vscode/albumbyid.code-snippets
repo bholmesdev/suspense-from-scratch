@@ -1,0 +1,10 @@
+{
+  "albumbyid": {
+    "scope": "",
+    "prefix": "t:albumbyid",
+    "body": [
+      "  <Suspense>\n    <p slot=\"fallback\">Getting Post...</p>\n    <Album id=\"bjork-post\" />\n  </Suspense>\n\n  <Suspense>\n    <p slot=\"fallback\">Getting How to be a Human Being...</p>\n    <Album id=\"glass-animals-how-to-be\" />\n  </Suspense>\n\n  <Suspense>\n    <p slot=\"fallback\">Getting The Fame...</p>\n    <Album id=\"lady-gaga-the-fame\" />\n  </Suspense>"
+    ],
+    "description": ""
+  }
+}
