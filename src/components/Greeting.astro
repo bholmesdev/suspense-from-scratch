@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 await sleep(ms);
 ---
 
-<p>Albums!</p>
+<p>Hello parallel fetching!</p>
 <Suspense>
   <p slot="fallback">Waiting on secret message...</p>
   <Nested />
